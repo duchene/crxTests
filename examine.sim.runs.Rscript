@@ -1,0 +1,45 @@
+library(phangorn)
+library(ggplot2)
+
+scenlist <- list(popsize = c(0.02, 0.5, 1), Nloci = c(100, 500, 1000), ratevar = c(0.5, 0.005, 0.05), linaccel = c(0, 0.02, 0.1), nclust = c(1, 3, 5), meanrate = c(0.01, 0.05, 0.1), clustbyrate = c(T, F), Ntax = c(50))
+scenarios <- expand.grid(scenlist)
+
+simdirs <- paste0("scen", 1:nrow(scenarios))
+
+pcak <- vector()
+pcakdiff <- vector()
+pcakwgt <- vector()
+pcakwgtdiff <- vector()
+propInfl <- vector()
+propInfldiff <- vector()
+pphi <- vector()
+ppsi <- vector()
+
+
+for(i in 1:length(simdirs)){
+	load(paste0("scen", i, "/simdata.Rdata"))
+	pcak[i] <- simdata[[3]]$pca.best.k
+	pcakdiff[i] <- simdata[[3]]$pca.best.k - scenarios[i,5]
+	pcakwgt[i] <- simdata[[3]]$weighted.pca.best.k
+	pcakwgtdiff[i] <- simdata[[3]]$weighted.pca.best.k - scenarios[i,5]
+	propInfl[i] <- length(which(simdata[[3]]$pca.clock.space$pIL[,1:2] < 0.01)) / length(simdata[[3]]$pca.clock.space$pIL[,1:2])
+	propInfldiff[i] <- propInfl[i] - scenarios[i, 4]
+	pphi[i] <- simdata[[3]]$pca.clock.space$pPhi
+	ppsi[i] <- simdata[[3]]$pca.clock.space$pPsi
+}
+
+pcakPvals <- sapply(1:7, function(x) summary(lm(pcak ~ scenarios[,x]))$coefficients[2, 4])
+pcakdiffPvals <- sapply(1:7, function(x) summary(lm(pcakdiff ~ scenarios[,x]))$coefficients[2, 4])
+pcakwgtPvals <- sapply(1:7, function(x) summary(lm(pcakwgt ~ scenarios[,x]))$coefficients[2, 4])
+pcakwgtdiffPvals <- sapply(1:7, function(x) summary(lm(pcakwgtdiff ~ scenarios[,x]))$coefficients[2, 4])
+propInflPvals <- sapply(1:7, function(x) summary(lm(propInfl ~ scenarios[,x]))$coefficients[2, 4])
+propInfldiffPvals <- sapply(1:7, function(x) summary(lm(propInfldiff ~ scenarios[,x]))$coefficients[2, 4])
+pphiPvals <- sapply(1:7, function(x) summary(lm(pphi ~ scenarios[,x]))$coefficients[2, 4])
+ppsiPvals <- sapply(1:7, function(x) summary(lm(ppsi ~ scenarios[,x]))$coefficients[2, 4])
+
+keyVars_pca <- rbind(pcakPvals, pcakdiffPvals, pcakwgtPvals, pcakwgtdiffPvals, propInflPvals, propInfldiffPvals, pphiPvals, ppsiPvals)
+colnames(keyVars_pca) <- colnames(scenarios)[1:7]
+
+alldatPCA <- cbind(scenarios, pcak, pcakdiff, pcakwgt, pcakwgtdiff, propInfl, propInfldiff, pphi, ppsi)
+
+save(alldatPCA, keyVars_pca, file = "simdat.pca.Rdata")

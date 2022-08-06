@@ -1,0 +1,54 @@
+dirs <- grep("scen", dir(), value = T)
+
+trueInferK <- vector()
+trueInferKW <- vector()
+trueInferKtib <- vector()
+trueInferKWtib <- vector()
+trueInferKglo <- vector()
+trueInferKWglo <- vector()
+for(i in 1:length(dirs)){
+	load(paste0("scen", i, "/simdata.Rdata"))
+	trueInferK[i] <- maxSE(f = simdata[[3]][[9]]$Tab[, "gap"], SE.f = simdata[[3]][[9]]$Tab[, "SE.sim"])
+	trueInferKW[i] <- maxSE(f = simdata[[3]][[10]]$Tab[, "gap"], SE.f = simdata[[3]][[10]]$Tab[, "SE.sim"])
+	trueInferKtib[i] <- maxSE(f = simdata[[3]][[9]]$Tab[, "gap"], SE.f = simdata[[3]][[9]]$Tab[, "SE.sim"], method = "Tibs2001SEmax")
+	trueInferKWtib[i] <- maxSE(f = simdata[[3]][[10]]$Tab[, "gap"], SE.f = simdata[[3]][[10]]$Tab[, "SE.sim"], method = "Tibs2001SEmax")
+	trueInferKglo[i] <- maxSE(f = simdata[[3]][[9]]$Tab[, "gap"], SE.f = simdata[[3]][[9]]$Tab[, "SE.sim"], method = "globalSEmax")
+	trueInferKWglo[i] <- maxSE(f = simdata[[3]][[10]]$Tab[, "gap"], SE.f = simdata[[3]][[10]]$Tab[, "SE.sim"], method = "globalSEmax")
+}
+
+trueInferKdiff <- trueInferK - alldatPCA$nclust
+trueInferKWdiff <- trueInferKW - alldatPCA$nclust
+trueInferKtibdiff <- trueInferKtib - alldatPCA$nclust
+trueInferKWtibdiff <- trueInferKWtib - alldatPCA$nclust
+trueInferKglodiff <- trueInferKglo - alldatPCA$nclust
+trueInferKWglodiff <- trueInferKWglo - alldatPCA$nclust
+
+pdf("criteria.comparisons.pdf", height = 5, width = 10, useDingbats = F)
+plot(table(alldatPCA$pcakdiff), type = "l", ylim = c(0, 750))
+par(new = T)
+plot(table(trueInferKdiff), col = "red", type = "l", ylim = c(0, 750), axes = F)
+par(new = T)
+plot(table(trueInferKtibdiff), col = "orange", type = "l", ylim = c(0, 750), axes = F)
+par(new = T)
+plot(table(trueInferKglodiff), col = "purple", type = "l", ylim = c(0, 750), axes = F)
+
+plot(table(alldatPCA$pcakwgtdiff), type = "l", ylim = c(0, 750))
+par(new = T)
+plot(table(trueInferKWdiff), col = "red", type = "l", ylim = c(0, 750), axes = F)
+par(new = T)
+plot(table(trueInferKWtibdiff), col = "orange", type = "l", ylim = c(0, 750), axes = F)
+par(new = T)
+plot(table(trueInferKWglodiff), col = "purple", type = "l", ylim = c(0, 750), axes = F)
+dev.off()
+
+sum(abs(alldatPCA$pcakwgtdiff))
+sum(abs(trueInferKWdiff))
+sum(abs(trueInferKWtibdiff))
+sum(abs(trueInferKWglodiff))
+
+sum(abs(alldatPCA$pcakdiff))
+sum(abs(trueInferKdiff))
+sum(abs(trueInferKtibdiff))
+sum(abs(trueInferKglodiff))
+
+

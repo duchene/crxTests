@@ -1,0 +1,55 @@
+# Sims assuming a chronogram, number of tips (ruminants).
+library(phangorn)
+library(NELSI)
+library(ClockstaRX)
+library(TreeSim)
+for(i in dir("~/Desktop/Software/phybase-master/R")) source(paste0("~/Desktop/Software/phybase-master/R/", i))
+source("~/Dropbox/Research/code/sim.coaltree.phylo.R")
+
+# Create scenarios table. linaccel is the proportion of lineages with a rate accelerated by 5x the mean
+# Current population sizes are 200K, 5M, 10M and  (and follows equation theta=2NeMu, e.g., 2*200K*5e-8). Nloci should be c(100, 500, 1000)
+scenlist <- list(popsize = c(0.02, 0.5, 1), Nloci = c(100, 500, 1000), ratevar = c(0.5, 0.005, 0.05), linaccel = c(0, 0.02, 0.1), nclust = c(1, 3, 5), meanrate = c(0.01, 0.05, 0.1), clustbyrate = c(T, F), Ntax = c(50))
+scenarios <- expand.grid(scenlist)
+#print(head(scenarios, 20))
+
+# For loop that simulates species tree from BD, creates gene trees, saves them, runs clockstarx on them and saves the result.
+
+for(i in 1:nrow(scenarios)){
+	print(i)
+	sptr <- ladderize(sim.bd.taxa.age(scenarios[i, 8], 1, 0.5, 0.1, 1, 65)[[1]])
+	simcoals <- lapply(1:scenarios[i, 2], function(x) ladderize(sim.coaltree.phylo(sptr, pop.size = scenarios[i, 1], nsamples = 1)))
+	# if single cluster
+	if(scenarios[i, 5] > 1) cutfact <- cut(1:scenarios[i, 2], scenarios[i, 5], 1:scenarios[i, 5])
+	if(scenarios[i, 5] == 1 | scenarios[i,7]) simphygrams <- lapply(simcoals, function(x) simulate.white.noise(x, params = list(rate = scenarios[i, 6], var = scenarios[i, 3]))[[1]])
+	# if number of clusters > 1 and clustered by rate then multiply the blens by the cluster number
+	if(scenarios[i, 5] > 1 & scenarios[i,7]){
+		for(j in 2:scenarios[i, 5]){ simphygrams[which(cutfact == j)] <- lapply(simphygrams[which(cutfact == j)], function(x){
+			x$edge.length <- x$edge.length * j
+			return(x)
+		})}
+	# if number of clusters > 1 and clustered by clock then make separate clock for each cluster. Within a cluster, lineage rates vary by a 10% of the mean rate on average (exponentially distributed).
+	} else if(scenarios[i, 5] > 1){
+		simphygrams <- list()
+		for(j in 1:scenarios[i, 5]){
+			clustree <- simulate.white.noise(sptr, params = list(rate = scenarios[i, 6], var = scenarios[i, 3]))[[1]]
+			simphygrams[which(cutfact == j)] <- lapply(simcoals[which(cutfact == j)], function(x){
+				tr <- clustree
+				tr$edge.length <- sapply(tr$edge.length, function(y) abs(y + rnorm(1, 0, y / 10)))
+				return(tr)
+			})
+		}
+	}
+	# if prop lineage accelerated > 0 then multiply the lengths of those lineages by 5
+	if(scenarios[i, 4] > 0){
+		accelins <- sample(1:Nedge(simphygrams[[1]]), round(scenarios[i, 4] * Nedge(simphygrams[[1]])))
+		for(j in 1:scenarios[i, 2]) simphygrams[[j]]$edge.length[accelins] <- sapply(simphygrams[[j]]$edge.length[accelins], function(x) x * 5)
+	}
+	#for(j in 1:15) plot(ladderize(simphygrams[[j]]))
+	system(paste0("mkdir scen", i))
+	setwd(paste0("scen", i))
+	simres <- ClockstaRX::diagnose.clocks(simphygrams, sptr)
+	simdata <- list(sptr, simphygrams, simres)
+	save(simdata, file = "simdata.Rdata")
+	setwd("..")
+}
+
