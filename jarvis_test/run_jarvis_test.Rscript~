@@ -1,4 +1,4 @@
 require(ClockstaRX)
 set.seed(1234)
-load("jarvis_trees.Rdata")
+load("jarvis_tree.Rdata")
 crx <- diagnose.clocks(c(jar12[sample(1:length(jar12), 100)], jarint[sample(1:length(jarint), 100)]), jartent, other.data = data.frame(datatype = c(rep("exon", 100), rep("intron", 100))), pdf.file="test_results")
