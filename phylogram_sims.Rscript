@@ -3,8 +3,12 @@ library(phangorn)
 library(NELSI)
 library(ClockstaRX)
 library(TreeSim)
+#require(remotes)
+#remotes::install_github("bomeara/phybase")
+library(phybase)
+
 for(i in dir("~/Desktop/Software/phybase-master/R")) source(paste0("~/Desktop/Software/phybase-master/R/", i))
-source("~/Dropbox/Research/code/sim.coaltree.phylo.R")
+#source("~/Dropbox/Research/code/sim.coaltree.phylo.R")
 
 # Create scenarios table. linaccel is the proportion of lineages with a rate accelerated by 5x the mean
 # Current population sizes are 200K, 5M, 10M and  (and follows equation theta=2NeMu, e.g., 2*200K*5e-8). Nloci should be c(100, 500, 1000)
@@ -14,7 +18,8 @@ scenarios <- expand.grid(scenlist)
 
 # For loop that simulates species tree from BD, creates gene trees, saves them, runs clockstarx on them and saves the result.
 
-for(i in 1:nrow(scenarios)){
+#for(i in 1:nrow(scenarios)){
+for(i in 28:32){
 	print(i)
 	sptr <- ladderize(sim.bd.taxa.age(scenarios[i, 8], 1, 0.5, 0.1, 1, 65)[[1]])
 	simcoals <- lapply(1:scenarios[i, 2], function(x) ladderize(sim.coaltree.phylo(sptr, pop.size = scenarios[i, 1], nsamples = 1)))
@@ -43,13 +48,14 @@ for(i in 1:nrow(scenarios)){
 	if(scenarios[i, 4] > 0){
 		accelins <- sample(1:Nedge(simphygrams[[1]]), round(scenarios[i, 4] * Nedge(simphygrams[[1]])))
 		for(j in 1:scenarios[i, 2]) simphygrams[[j]]$edge.length[accelins] <- sapply(simphygrams[[j]]$edge.length[accelins], function(x) x * 5)
+	} else {
+		accelins <- NULL
 	}
 	#for(j in 1:15) plot(ladderize(simphygrams[[j]]))
 	system(paste0("mkdir scen", i))
 	setwd(paste0("scen", i))
 	simres <- ClockstaRX::diagnose.clocks(simphygrams, sptr)
-	simdata <- list(sptr, simphygrams, simres)
+	simdata <- list(sptr, simphygrams, simres, accelins)
 	save(simdata, file = "simdata.Rdata")
 	setwd("..")
 }
-

@@ -6,15 +6,9 @@ scenarios <- expand.grid(scenlist)
 
 simdirs <- paste0("scen", 1:nrow(scenarios))
 
-pcak <- vector()
-pcakdiff <- vector()
-pcakwgt <- vector()
-pcakwgtdiff <- vector()
-propInfl <- vector()
-propInfldiff <- vector()
-pphi <- vector()
-ppsi <- vector()
+# Create and fill vectors for results variables of interest.
 
+pcak <- pcakdiff <- pcakwgt <- pcakwgtdiff <- propInfl <- propInfldiff <- accelSuccess <- accelFPR <- pphi <- ppsi <- vector()
 
 for(i in 1:length(simdirs)){
 	load(paste0("scen", i, "/simdata.Rdata"))
@@ -24,9 +18,22 @@ for(i in 1:length(simdirs)){
 	pcakwgtdiff[i] <- simdata[[3]]$weighted.pca.best.k - scenarios[i,5]
 	propInfl[i] <- length(which(simdata[[3]]$pca.clock.space$pIL[,1:2] < 0.01)) / length(simdata[[3]]$pca.clock.space$pIL[,1:2])
 	propInfldiff[i] <- propInfl[i] - scenarios[i, 4]
+	if(length(simdata[[4]]) != 0){
+		if(simdata[[1]]$edge[1,1] != Ntip(simdata[[1]])+1) stop("Species tree is badly formed at root.")
+		sptr_unr <- simdata[[1]]
+		sptr_unr$edge.length <- 0:(Nedge(simdata[[1]]) - 1)
+		targetBrs <- which(unroot(sptr_unr)$edge.length %in% sptr_unr$edge.length[simdata[[4]]])
+		accelSuccess[i] <- all(sapply(targetBrs, function(x) any(simdata[[3]]$pca.clock.space$pIL[x,1:2] < 0.01)))
+		accelFPR[i] <- mean(apply(simdata[[3]]$pca.clock.space$pIL[-targetBrs,1:2], 2, function(x) length(which(x < 0.01))), na.rm = T) / Nedge(unroot(simdata[[1]]))
+	} else {
+		accelSuccess[i] <- T
+		accelFPR[i] <- mean(apply(simdata[[3]]$pca.clock.space$pIL[,1:2], 2, function(x) length(which(x < 0.01))), na.rm = T) / Nedge(unroot(simdata[[1]]))
+	}
 	pphi[i] <- simdata[[3]]$pca.clock.space$pPhi
 	ppsi[i] <- simdata[[3]]$pca.clock.space$pPsi
 }
+
+# Test associations between each estimate of interets and all simulated variables.
 
 pcakPvals <- sapply(1:7, function(x) summary(lm(pcak ~ scenarios[,x]))$coefficients[2, 4])
 pcakdiffPvals <- sapply(1:7, function(x) summary(lm(pcakdiff ~ scenarios[,x]))$coefficients[2, 4])
@@ -34,6 +41,8 @@ pcakwgtPvals <- sapply(1:7, function(x) summary(lm(pcakwgt ~ scenarios[,x]))$coe
 pcakwgtdiffPvals <- sapply(1:7, function(x) summary(lm(pcakwgtdiff ~ scenarios[,x]))$coefficients[2, 4])
 propInflPvals <- sapply(1:7, function(x) summary(lm(propInfl ~ scenarios[,x]))$coefficients[2, 4])
 propInfldiffPvals <- sapply(1:7, function(x) summary(lm(propInfldiff ~ scenarios[,x]))$coefficients[2, 4])
+accelSuccessPvals <- sapply(1:6, function(x) summary(lm(accelSuccess ~ scenarios[,x]))$coefficients[2, 4])
+accelFPRPvals <- sapply(1:7, function(x) summary(lm(accelFPR ~ scenarios[,x]))$coefficients[2, 4])
 pphiPvals <- sapply(1:7, function(x) summary(lm(pphi ~ scenarios[,x]))$coefficients[2, 4])
 ppsiPvals <- sapply(1:7, function(x) summary(lm(ppsi ~ scenarios[,x]))$coefficients[2, 4])
 
@@ -42,4 +51,4 @@ colnames(keyVars_pca) <- colnames(scenarios)[1:7]
 
 alldatPCA <- cbind(scenarios, pcak, pcakdiff, pcakwgt, pcakwgtdiff, propInfl, propInfldiff, pphi, ppsi)
 
-save(alldatPCA, keyVars_pca, file = "simdat.pca.Rdata")
+#save(alldatPCA, keyVars_pca, file = "simdat.pca.Rdata")
