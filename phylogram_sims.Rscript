@@ -18,8 +18,7 @@ scenarios <- expand.grid(scenlist)
 
 # For loop that simulates species tree from BD, creates gene trees, saves them, runs clockstarx on them and saves the result.
 
-#for(i in 1:nrow(scenarios)){
-for(i in 28:32){
+for(i in 1:nrow(scenarios)){
 	print(i)
 	sptr <- ladderize(sim.bd.taxa.age(scenarios[i, 8], 1, 0.5, 0.1, 1, 65)[[1]])
 	simcoals <- lapply(1:scenarios[i, 2], function(x) ladderize(sim.coaltree.phylo(sptr, pop.size = scenarios[i, 1], nsamples = 1)))

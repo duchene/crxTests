@@ -23,7 +23,7 @@ for(i in 1:length(simdirs)){
 		sptr_unr <- simdata[[1]]
 		sptr_unr$edge.length <- 0:(Nedge(simdata[[1]]) - 1)
 		targetBrs <- which(unroot(sptr_unr)$edge.length %in% sptr_unr$edge.length[simdata[[4]]])
-		accelSuccess[i] <- all(sapply(targetBrs, function(x) any(simdata[[3]]$pca.clock.space$pIL[x,1:2] < 0.01)))
+		accelSuccess[i] <- all(sapply(targetBrs, function(x) any(simdata[[3]]$pca.clock.space$pIL[x,1:10] < 0.01)))
 		accelFPR[i] <- mean(apply(simdata[[3]]$pca.clock.space$pIL[-targetBrs,1:2], 2, function(x) length(which(x < 0.01))), na.rm = T) / Nedge(unroot(simdata[[1]]))
 	} else {
 		accelSuccess[i] <- T
@@ -41,14 +41,14 @@ pcakwgtPvals <- sapply(1:7, function(x) summary(lm(pcakwgt ~ scenarios[,x]))$coe
 pcakwgtdiffPvals <- sapply(1:7, function(x) summary(lm(pcakwgtdiff ~ scenarios[,x]))$coefficients[2, 4])
 propInflPvals <- sapply(1:7, function(x) summary(lm(propInfl ~ scenarios[,x]))$coefficients[2, 4])
 propInfldiffPvals <- sapply(1:7, function(x) summary(lm(propInfldiff ~ scenarios[,x]))$coefficients[2, 4])
-accelSuccessPvals <- sapply(1:6, function(x) summary(lm(accelSuccess ~ scenarios[,x]))$coefficients[2, 4])
+accelSuccessPvals <- c(sapply(1:6, function(x) summary(lm(accelSuccess ~ scenarios[,x]))$coefficients[2, 4]), NA)
 accelFPRPvals <- sapply(1:7, function(x) summary(lm(accelFPR ~ scenarios[,x]))$coefficients[2, 4])
 pphiPvals <- sapply(1:7, function(x) summary(lm(pphi ~ scenarios[,x]))$coefficients[2, 4])
 ppsiPvals <- sapply(1:7, function(x) summary(lm(ppsi ~ scenarios[,x]))$coefficients[2, 4])
 
-keyVars_pca <- rbind(pcakPvals, pcakdiffPvals, pcakwgtPvals, pcakwgtdiffPvals, propInflPvals, propInfldiffPvals, pphiPvals, ppsiPvals)
+keyVars_pca <- rbind(pcakPvals, pcakdiffPvals, pcakwgtPvals, pcakwgtdiffPvals, propInflPvals, propInfldiffPvals, accelSuccessPvals, accelFPRPvals, pphiPvals, ppsiPvals)
 colnames(keyVars_pca) <- colnames(scenarios)[1:7]
 
-alldatPCA <- cbind(scenarios, pcak, pcakdiff, pcakwgt, pcakwgtdiff, propInfl, propInfldiff, pphi, ppsi)
+alldatPCA <- cbind(scenarios, pcak, pcakdiff, pcakwgt, pcakwgtdiff, propInfl, propInfldiff, accelSuccess, accelFPR, pphi, ppsi)
 
 #save(alldatPCA, keyVars_pca, file = "simdat.pca.Rdata")
